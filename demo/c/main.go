@@ -1,7 +1,7 @@
 // ping
 // echo
 // push
-// pipe
+// exec
 // bin
 package main
 
@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -36,13 +37,19 @@ func Run(method string, c *websocket.Conn) {
 	c.SetPongHandler(func(appData string) error {
 		startTime, err := strconv.Atoi(appData)
 		if err != nil {
-			log.Fatal("resp err", err)
+			log.Fatal("err response data time()", err)
 		}
 		fmt.Printf("output: ping time=%v ms\n", util.GetMillisecTime()-startTime)
 		return nil
 	})
 
 	go func() {
+		if method == "exec" {
+			cmd := strings.Join(os.Args[3:], " ")
+			if err := util.WsWrite(c, util.MsgTypeExec, []byte(cmd)); err != nil {
+				log.Fatal("err exec write", err)
+			}
+		}
 		pingTicker := time.NewTicker(pingLoopInterval)
 		echoTicker := time.NewTicker(echoLoopInterval)
 		pushTicker := time.NewTicker(pushLoopInterval)
@@ -53,25 +60,27 @@ func Run(method string, c *websocket.Conn) {
 					break
 				}
 				if err := util.WsWrite(c, websocket.PingMessage, []byte(util.GetMillisecTimeStr())); err != nil {
-					fmt.Println("ping write err", err)
+					log.Fatal("err ping write", err)
 				}
 			case <-echoTicker.C:
 				if method != "echo" {
 					break
 				}
+				// TODO echo 内容
 				if err := util.WsWrite(c, websocket.TextMessage, []byte("echo")); err != nil {
-					log.Println("echo write err", err)
+					log.Fatal("err echo write", err)
 				}
 			case <-pushTicker.C:
 				if method != "push" {
 					break
 				}
+				// TODO push target
 				if err := util.WsWrite(c, util.MsgTypeJson, []byte("push")); err != nil {
-					log.Println("push write err", err)
+					log.Fatal("err push write", err)
 				}
 			case <-sig:
 				if err := util.WsWrite(c, websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
-					log.Fatal("write close:", err)
+					log.Fatal("err send close:", err)
 				}
 			}
 		}
@@ -79,7 +88,7 @@ func Run(method string, c *websocket.Conn) {
 	m := make(chan []byte)
 	go func() {
 		for {
-			_, msg, err := util.WsRead(c)
+			msgType, msg, err := util.WsRead(c)
 			if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
 				fmt.Println("websocket close")
 				os.Exit(1)
@@ -89,6 +98,10 @@ func Run(method string, c *websocket.Conn) {
 				os.Exit(1)
 			}
 			m <- msg
+			switch msgType {
+			case util.MsgTypeExec:
+				os.Exit(0)
+			}
 		}
 	}()
 
@@ -102,14 +115,14 @@ func main() {
 	uid := "0"
 	method := "echo"
 	if len(os.Args) < 3 {
-		log.Println("notice: need params [uid] [method], default 0 echo")
+		log.Println("notice: need params [uid] [method], default", uid, method)
 	} else {
 		uid = os.Args[1]
 		method = os.Args[2]
 	}
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/" + method, RawQuery: "uid=" + uid}
-	fmt.Println(u.String())
+	fmt.Println("url:", u.String())
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("dial: ", err)

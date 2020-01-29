@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	MsgTypeJson = 21
-	MsgTypeCypt = 22
+	MsgTypeExec = 21 + iota
+	MsgTypeJson
+	MsgTypeCypt
 )
 
 func GetMillisecTime() int {
@@ -32,6 +33,8 @@ func WsWrite(c *websocket.Conn, msgType int, msg []byte) error {
 	var err error
 	switch msgTypeStr {
 	case strconv.Itoa(MsgTypeCypt):
+	// case strconv.Itoa(MsgTypeExec):
+	// 	err = c.WriteMessage(websocket.TextMessage, msg)
 	case strconv.Itoa(MsgTypeJson):
 		// TODO
 		j := &JsonRPC{Id: "123", Method: "push", Params: []string{"4", "5", "6"}}
@@ -41,7 +44,7 @@ func WsWrite(c *websocket.Conn, msgType int, msg []byte) error {
 		bb.Write([]byte(msgTypeStr))
 		bb.Write(msg)
 		msg = bb.Bytes()
-		err = c.WriteMessage(msgType, msg)
+		err = c.WriteMessage(websocket.TextMessage, msg)
 	}
 	// fmt.Println(msgType, string(msg))
 	return err
@@ -54,12 +57,14 @@ func WsRead(c *websocket.Conn) (int, []byte, error) {
 	if len(msg) == 0 || isControl(msgType) {
 		return msgType, msg, err
 	}
-	switch string(msg[0:2]) {
+	flag := string(msg[0:2])
+	msg = GetMsgData(msg)
+	switch flag {
 	case strconv.Itoa(MsgTypeCypt):
+	case strconv.Itoa(MsgTypeExec):
+		msgType = MsgTypeExec
 	case strconv.Itoa(MsgTypeJson):
 		msgType = MsgTypeJson
-	default:
-		msg = GetMsgData(msg)
 	}
 	// fmt.Println("------", string(msg))
 	return msgType, bytes.Trim(msg, "\n"), err
