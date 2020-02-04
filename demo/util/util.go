@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -33,11 +34,18 @@ func WsWrite(c *websocket.Conn, msgType int, msg []byte) error {
 	var err error
 	switch msgTypeStr {
 	case strconv.Itoa(MsgTypeCypt):
-	// case strconv.Itoa(MsgTypeExec):
-	// 	err = c.WriteMessage(websocket.TextMessage, msg)
 	case strconv.Itoa(MsgTypeJson):
-		// TODO
-		j := &JsonRPC{Id: "123", Method: "push", Params: []string{"4", "5", "6"}}
+		var pushMsg, uids string
+		if len(msg) >= 1 {
+			s := string(msg)
+			sm := strings.Split(s, " ")
+			pushMsg = string(sm[0])
+			uids = string(strings.Join(sm[1:], ","))
+		} else {
+			pushMsg = ""
+			uids = ""
+		}
+		j := &JsonRPC{Id: "123", Method: "push", Params: []string{"pushMsg=" + pushMsg, "uids=" + uids}}
 		err = writeJSON(c, strconv.Itoa(MsgTypeJson), j)
 	default:
 		bb := bytes.Buffer{}

@@ -1,5 +1,7 @@
 package util
 
+// TODO 分组conn
+
 import (
 	"sync"
 
@@ -38,4 +40,12 @@ func (bd *Binder) Unbind(uid string) {
 	bd.mu.Lock()
 	defer bd.mu.Unlock()
 	delete(bd.uid2conn, uid)
+}
+
+func (bd *Binder) GetConnAll() []*websocket.Conn {
+	var coll []*websocket.Conn
+	for _, conn := range bd.uid2conn {
+		coll = append(coll, conn)
+	}
+	return coll
 }

@@ -66,16 +66,24 @@ func Run(method string, c *websocket.Conn) {
 				if method != "echo" {
 					break
 				}
-				// TODO echo 内容
-				if err := util.WsWrite(c, websocket.TextMessage, []byte("echo")); err != nil {
+				var msg []byte
+				if len(os.Args) <= 2 {
+					msg = []byte("echo")
+				} else {
+					msg = []byte(strings.Join(os.Args[2:], " "))
+				}
+				if err := util.WsWrite(c, websocket.TextMessage, msg); err != nil {
 					log.Fatal("err echo write", err)
 				}
 			case <-pushTicker.C:
 				if method != "push" {
 					break
 				}
-				// TODO push target
-				if err := util.WsWrite(c, util.MsgTypeJson, []byte("push")); err != nil {
+				if len(os.Args) <= 3 {
+					log.Fatal("err param need [uid] push [pushMsg] [uid...]")
+				}
+				uids := strings.Join(os.Args[3:], " ")
+				if err := util.WsWrite(c, util.MsgTypeJson, []byte(uids)); err != nil {
 					log.Fatal("err push write", err)
 				}
 			case <-sig:

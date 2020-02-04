@@ -58,15 +58,26 @@ func Run(w http.ResponseWriter, r *http.Request) {
 		case util.MsgTypeJson:
 			j := &util.JsonRPC{}
 			err = json.Unmarshal(msg, j)
-			// TODO 根据 json 的 method 路由到不同的handler
+			// TODO 根据 json 的 method 路由到不同的handler 现在只有push
 			if j.Method == "push" {
 				fmt.Println("PUSH:", string(msg))
-				for _, toUID := range j.Params {
-					toC, cExists := bd.GetConn(toUID)
-					if cExists == false {
+				for _, pv := range j.Params {
+					kv := strings.Split(pv, "=")
+					if kv[0] != "uids" {
 						continue
 					}
-					err = util.WsWrite(toC, websocket.TextMessage, []byte("push by "+uid))
+					if kv[1] == "" { // push all
+						toCAll := bd.GetConnAll()
+						for _, toC := range toCAll {
+							err = util.WsWrite(toC, websocket.TextMessage, []byte("push by "+uid))
+						}
+					} else { // push one
+						toC, cExists := bd.GetConn(kv[1])
+						if cExists == false {
+							continue
+						}
+						err = util.WsWrite(toC, websocket.TextMessage, []byte("push by "+uid))
+					}
 				}
 			}
 		case util.MsgTypeExec:
