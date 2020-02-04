@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/sung1011/gows/demo/util"
+	"github.com/sung1011/gows/src/util"
 )
 
 var addr = flag.String("addr", "127.0.0.1:8081", "http service address")
