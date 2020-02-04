@@ -54,7 +54,6 @@ func WsWrite(c *websocket.Conn, msgType int, msg []byte) error {
 		msg = bb.Bytes()
 		err = c.WriteMessage(websocket.TextMessage, msg)
 	}
-	// fmt.Println(msgType, string(msg))
 	return err
 }
 

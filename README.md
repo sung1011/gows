@@ -28,6 +28,11 @@ client1 `go run demo/c/main.go 1 push foo 2`  // uid 1 push msg to 2
 client2 `go run demo/c/main.go 2 push bar 1`  // uid 2 push msg to 1  
 client3 `go run demo/c/main.go 3 push baz`  // push all  
 
+### exec
+
+server `go run demo/s/main.go`  
+client3 `go run demo/c/main.go exec tail -f main.go`  // pipe exec  
+
 ## Doc
 
 ### proto
